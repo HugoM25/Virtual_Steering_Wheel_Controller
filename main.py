@@ -36,6 +36,9 @@ def main():
         angle_max = 45
         angle = max(min(hand_control.get_angle_between_hands(),angle_max),-45)
 
+        #Check for open palms
+        print("Left palm is open ? : " + str(hand_control.is_left_palm_open()))
+        print("Right palm is open ? : " + str(hand_control.is_right_palm_open()))
         #Use values with gamepad
 
         #Accelerate or not
