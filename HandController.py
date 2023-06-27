@@ -14,11 +14,22 @@ class HandControl :
         self.direction = None
         self.hands_pos_average = []
 
+        self.frames_r_palm_opened = 0
+        self.frames_r_palm_closed = 0
+        self.is_r_palm_closed = 1
+
+        self.frames_l_palm_opened = 0
+        self.frames_l_palm_closed = 0
+        self.is_l_palm_closed = 1
+
+        self.min_frame_to_switch_state = 5
+
     def update(self, image) :
         self.__set_image(image)
         self.__set_landmarks_pos()
         self.__set_average_hand_coordinate()
         self.__set_good_hand_order()
+        self.__switch_palms_states()
 
     def get_distance_between_hands(self):
         if len(self.hands_pos_average) >= 2 :
@@ -43,6 +54,48 @@ class HandControl :
         else :
             return 0
 
+    def __switch_palms_states(self):
+        # Left palm
+        if self.is_left_palm_open() :
+            self.frames_l_palm_opened += 1
+            self.frames_l_palm_closed = 0
+        else :
+            self.frames_l_palm_closed += 1
+            self.frames_l_palm_opened = 0
+
+        if self.frames_l_palm_opened > self.min_frame_to_switch_state or self.frames_l_palm_closed > self.min_frame_to_switch_state :
+            #Switch state of left palm
+            if self.frames_l_palm_opened > self.frames_l_palm_closed :
+                # It needs to switch to open
+                self.is_l_palm_closed = 0
+            else :
+                self.is_l_palm_closed = 1
+
+            self.frames_l_palm_opened = 0
+            self.frames_l_palm_closed = 0
+
+        # Right palm
+        if self.is_right_palm_open():
+            self.frames_r_palm_opened += 1
+            self.frames_r_palm_closed = 0
+        else:
+            self.frames_r_palm_closed += 1
+            self.frames_r_palm_opened = 0
+
+        if self.frames_r_palm_opened > self.min_frame_to_switch_state or self.frames_r_palm_closed > self.min_frame_to_switch_state:
+            # Switch state of right palm
+            if self.frames_r_palm_opened > self.frames_r_palm_closed:
+                # It needs to switch to open
+                self.is_r_palm_closed = 0
+            else:
+                self.is_r_palm_closed = 1
+
+            self.frames_r_palm_opened = 0
+            self.frames_r_palm_closed = 0
+
+
+
+
     def is_left_palm_open(self):
         if len(self.hands_landmarks_list) >= 2 :
             return self.__is_palm_open(self.hands_landmarks_list[1])
@@ -56,12 +109,15 @@ class HandControl :
             return False
 
     def show_image_debug(self):
+
         img_debug = self.image
 
         if len(self.hands_pos_average) >= 2:
+
             # Draw debug point to average hand landmarks position (hopefully the hands)
             cv2.circle(img_debug, self.hands_pos_average[0], 10, (0, 0, 255), -1)
             cv2.circle(img_debug, self.hands_pos_average[1], 10, (255, 0, 0), -1)
+
             # Draw debug line between the hands
             cv2.line(img_debug, self.hands_pos_average[0], self.hands_pos_average[1], (0, 255, 0), 2)
 
@@ -71,11 +127,12 @@ class HandControl :
                        int(self.get_distance_between_hands() / 2), (0, 255, 0), 2)
 
         img_debug = cv2.flip(img_debug, 1)
-        cv2.putText(img_debug, "Speed : " + str(self.get_distance_between_hands()), (0, 30), cv2.FONT_HERSHEY_SIMPLEX,
+        cv2.putText(img_debug, "Speed : " + str(round(self.get_distance_between_hands(),2)), (0, 500-30), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (0, 255, 0), 1, 1)
-        cv2.putText(img_debug, "Angle : " + str(self.get_angle_between_hands()), (0, 60), cv2.FONT_HERSHEY_SIMPLEX, 1,
+        cv2.putText(img_debug, "Angle : " + str(round(self.get_angle_between_hands(),2)), (0, 500-60), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (0, 255, 0), 1, 1)
-
+        cv2.putText(img_debug, "RPalm ? : " + str(round(self.is_r_palm_closed ,2)) + " LPalm ? : " + str(round(self.is_l_palm_closed,2)) , (0, 500-90), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 255, 0), 1, 1)
         return img_debug
 
     def __set_landmarks_pos(self):
@@ -127,12 +184,12 @@ class HandControl :
 
 
     def __is_palm_open(self, hand_landmarks):
-
         x , y = hand_landmarks.landmark[0].x , hand_landmarks.landmark[0].y
         gap_between_landmarks = 0
         for landmark in hand_landmarks.landmark :
             gap_between_landmarks += sqrt( (x - landmark.x)**2 + (y - landmark.y)**2)
-        max_space = sqrt((hand_landmarks.landmark[0].x - hand_landmarks.landmark[-1].x)**2 + (hand_landmarks.landmark[0].y  - hand_landmarks.landmark[-1].y)**2)
+        max_space = sqrt((hand_landmarks.landmark[0].x - hand_landmarks.landmark[-1].x)**2
+                         + (hand_landmarks.landmark[0].y  - hand_landmarks.landmark[-1].y)**2)
         ratio = gap_between_landmarks/max_space
 
         if ratio < 17 and ratio > 0 :
