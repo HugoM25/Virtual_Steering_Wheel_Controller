@@ -18,10 +18,8 @@ def main():
     time.sleep(0.5)
 
 
-    usedItem = False
-    frameWithPalmOpenedCount = 0
-    minFrameToTriggerItem = 10
-
+    was_left_palm_open = False
+    was_right_palm_open = False
 
     # Game loop
     while cap.isOpened():
@@ -48,17 +46,9 @@ def main():
 
 
         #Use an object
-
-        if hand_control.is_left_palm_open() :
-            frameWithPalmOpenedCount += 1
-
-            if frameWithPalmOpenedCount > minFrameToTriggerItem and usedItem == False :
-                gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
-                usedItem = True
-
+        if hand_control.is_l_palm_closed and was_left_palm_open :
+            gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
         else :
-            usedItem =  False
-            frameWithPalmOpenedCount = 0
             gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
 
         #Turn
